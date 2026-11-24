@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* --- デザイン定義 (Dark Mode Base) --- */
+    :root {
+      --bg-dark: #13151a;
+      --bg-panel: #1f222a;
+      --brand: #4a90e2;
+      --text-main: #e0e0e0;
+      --text-sub: #90949c;
+      --border: #2f333d;
+      --hover: rgba(255,255,255,0.05);
+      --alert-bg: rgba(255, 76, 76, 0.1);
+      --alert-text: #ff6b6b;
+    }
+
+    /* --- ライトモード対応 --- */
+    body.light-mode {
+      --bg-dark: #f0f2f5;
+      --bg-panel: #ffffff;
+      --brand: #2563eb;
+      --text-main: #1f2937;
+      --text-sub: #6b7280;
+      --border: #d1d5db;
+      --hover: rgba(0,0,0,0.05);
+      --alert-bg: rgba(239, 68, 68, 0.1);
+      --alert-text: #dc2626;
+    }
+    body.light-mode .form-input { background: #ffffff; color: #1f2937; }
+    body.light-mode input[type="date"] { color-scheme: light; }
+    body.light-mode .readonly-input { background: #f3f4f6 !important; color: #6b7280 !important; border-color: #d1d5db; }
+    body.light-mode .btn-upload { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
+    body.light-mode .btn-upload:hover { background: #e5e7eb; }
+    body.light-mode .drop-zone { border-color: #d1d5db; color: #6b7280; }
+
+    body { font-family: "Helvetica Neue", Arial, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; display: flex; height: 100vh; overflow: hidden; transition: background-color 0.3s, color 0.3s; }
+
+    /* サイドバー */
+    .sidebar { width: 240px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; transition: background-color 0.3s, border-color 0.3s; }
+    .brand-area { padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+    .nav-item { padding: 14px 20px; color: var(--text-sub); cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.2s; border-left: 3px solid transparent; }
+    .nav-item:hover, .nav-item.active { background: var(--hover); color: var(--text-main); border-left-color: var(--brand); }
+    .nav-group { font-size: 11px; color: #555; padding: 20px 20px 5px; font-weight: bold; text-transform: uppercase; }
+
+    /* メインエリア */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .top-bar { height: 60px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 25px; background: var(--bg-dark); transition: background-color 0.3s, border-color 0.3s; }
+    .page-title { font-weight: bold; font-size: 18px; }
+    
+    /* 検索UI & ボタン */
+    .search-wrap { display: flex; gap: 10px; align-items: center; }
+    .search-select { background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); padding: 8px 10px; border-radius: 4px; outline: none; font-size: 13px; cursor: pointer; transition: 0.3s; }
+    .search-select:focus { border-color: var(--brand); }
+    .search-box { position: relative; }
+    .search-input { background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); padding: 8px 15px 8px 35px; border-radius: 20px; width: 220px; outline: none; transition: 0.3s; }
+    .search-input:focus { border-color: var(--brand); width: 300px; }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-sub); font-size: 12px; }
+
+    /* 複数選択フィルタ（A案） */
+    .filter-bar { display: none; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 25px; border-bottom: 1px solid var(--border); background: var(--bg-panel); }
+    .filter-bar.is-open { display: flex; }
+    .filter-hint { font-size: 12px; color: var(--text-sub); margin-right: 4px; }
+    .filter-dropdown { position: relative; }
+    .filter-btn { background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-main); padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .filter-btn.has-selection, #filter-toggle-btn.has-selection { border-color: var(--brand); color: var(--brand); }
+    .filter-menu { display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 50; min-width: 220px; max-height: 260px; overflow-y: auto; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); padding: 8px; }
+    .filter-menu.open { display: block; }
+    .filter-menu label { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 12px; cursor: pointer; border-radius: 4px; }
+    .filter-menu label:hover { background: var(--hover); }
+    .filter-menu-empty { padding: 10px; font-size: 12px; color: var(--text-sub); }
+    .global-filter-box { max-width: 600px; margin: 0 auto 16px; text-align: left; background: var(--bg-panel); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
+    .global-filter-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 15px; background: transparent; border: none; color: var(--text-sub); font-size: 12px; cursor: pointer; text-align: left; }
+    .global-filter-toggle:hover { color: var(--text-main); background: var(--hover); }
+    .global-filter-toggle .caret { transition: transform 0.2s; }
+    .global-filter-box.open .global-filter-toggle .caret { transform: rotate(180deg); }
+    .global-filter-box.open .global-filter-toggle { color: var(--brand); }
+    .global-filter-body { display: none; padding: 0 15px 12px; border-top: 1px solid var(--border); }
+    .global-filter-box.open .global-filter-body { display: block; }
+    .global-filter-checks { display: flex; flex-wrap: wrap; gap: 8px 14px; max-height: 120px; overflow-y: auto; padding-top: 10px; }
+    .global-filter-checks label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+
+    .content { flex: 1; overflow-y: auto; padding: 25px; position: relative; }
+
+    /* 会社・拠点選択など */
+    .selection-screen { text-align: center; margin-top: 30px; }
+    .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; max-width: 900px; margin: 30px auto; }
+    .card-btn { background: var(--bg-panel); padding: 25px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; position: relative; overflow: hidden; }
+    .card-btn:hover { border-color: var(--brand); transform: translateY(-4px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .card-sub { font-size: 11px; color: var(--text-sub); margin-top: 5px; }
+
+    /* アラート通知エリア */
+    .alert-banner { background: var(--alert-bg); border: 1px solid var(--alert-text); color: var(--alert-text); max-width: 800px; margin: 0 auto 20px; padding: 15px; border-radius: 8px; text-align: left; display: none; }
+    .alert-banner h3 { margin: 0 0 10px 0; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+    .alert-list { list-style: none; padding: 0; margin: 0; font-size: 13px; }
+    .alert-item { margin-bottom: 5px; border-bottom: 1px solid rgba(255,107,107,0.2); padding: 8px; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-item:hover { background: rgba(255, 76, 76, 0.15); }
+
+    /* テーブル */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+    th { position: sticky; top: 0; background: var(--bg-panel); padding: 12px; text-align: left; color: var(--text-sub); border-bottom: 2px solid var(--border); white-space: nowrap; z-index: 10; user-select: none; transition: background-color 0.2s; }
+    th:hover { background: var(--hover); color: var(--text-main); }
+    th i.sort-icon { margin-left: 5px; font-size: 11px; color: var(--brand); }
+    th i.sort-icon-default { margin-left: 5px; font-size: 11px; opacity: 0.3; }
+    
+    /* ▼ 追加：ドラッグ＆ドロップ用スタイル */
+    th[draggable="true"] { cursor: grab; }
+    th[draggable="true"]:active { cursor: grabbing; }
+    th.dragging { opacity: 0.4; background-color: var(--hover); }
+    th.drag-over-left { border-left: 3px solid var(--brand); }
+    th.drag-over-right { border-right: 3px solid var(--brand); }
+
+    td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text-main); font-size: 11px; line-height: 1.4; height: 40px; max-height: 40px; overflow: hidden; }
+    .cell-content { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; word-break: break-all; }
+    .img-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; background: #333; display: block; }
+    tr.row-alert td { background: rgba(255, 76, 76, 0.08); color: #ffadad; }
+    tbody tr { cursor: pointer; transition: background-color 0.2s; }
+    tbody tr:hover td { background-color: var(--hover); }
+
+    /* カラムリサイズ用ハンドル */
+    .resizer { position: absolute; top: 0; right: 0; width: 5px; height: 100%; cursor: col-resize; z-index: 11; transition: background-color 0.2s; }
+    .resizer:hover, .resizer.resizing { background-color: var(--brand); }
+
+    /* モーダル */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-content { background: var(--bg-panel); width: 650px; max-height: 90vh; border-radius: 10px; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.5); transition: background-color 0.3s; position: relative; }
+    .modal-header { padding: 15px 25px; border-bottom: 1px solid var(--border); font-weight: bold; display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none; }
+    .modal-header:active { cursor: grabbing; }
+    
+    .modal-body { padding: 25px; overflow-y: auto; }
+    .form-row { margin-bottom: 15px; }
+    .form-row label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 5px; }
+    .form-input { width: 100%; padding: 10px; background: #13151a; border: 1px solid var(--border); color: white; border-radius: 4px; box-sizing: border-box; outline: none; font-size: 14px; transition: 0.3s; }
+    .form-input:focus { border-color: var(--brand); }
+    .readonly-input { background: #2a2a2a; color: #777; }
+
+    /* アップロード・ドラッグ＆ドロップ用 */
+    .input-group { display: flex; gap: 5px; }
+    .btn-upload { background: #3b4252; color: #e0e0e0; border: 1px solid var(--border); border-radius: 4px; padding: 0 15px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 12px; white-space: nowrap; transition: 0.3s; }
+    .btn-upload.loading { opacity: 0.7; pointer-events: none; }
+    
+    .drop-zone { border: 2px dashed var(--border); border-radius: 4px; padding: 15px; text-align: center; color: var(--text-sub); cursor: pointer; transition: background-color 0.3s, border-color 0.3s, color 0.3s; margin-bottom: 8px; font-size: 12px; }
+    .drop-zone.dragover { background-color: var(--hover); border-color: var(--brand); color: var(--brand); }
+
+    .alert-setting-area { border: 1px solid var(--alert-text); padding: 15px; border-radius: 4px; margin-top: 20px; background: rgba(255, 76, 76, 0.05); }
+    .alert-title { color: var(--alert-text); font-weight: bold; margin-bottom: 10px; display: block; font-size: 13px; }
+    .alert-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .alert-tab { border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    .alert-tab.active { border-color: var(--brand); color: var(--brand); }
+    .alert-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .alert-actions .btn { padding: 4px 8px; font-size: 11px; }
+    .alert-hint { font-size: 12px; color: var(--text-sub); margin: 0 0 16px; line-height: 1.5; }
+
+    .btn { padding: 8px 20px; border-radius: 4px; cursor: pointer; border: none; font-weight: bold; transition: 0.2s; }
+    .btn-primary { background: var(--brand); color: white; }
+    .btn-primary:disabled { background: #6b7280; cursor: not-allowed; opacity: 0.5; }
+    .btn-ghost { background: transparent; color: var(--text-sub); }
+    .btn-ghost:hover { color: var(--text-main); }
+    .btn-ghost:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <nav class="sidebar">
+    <div class="brand-area">
+      <img src="https://www.rikaken-hd.co.jp/wp-content/themes/rikaken/assets/images/common/logo_group.png" alt="RIKAKEN" style="max-width: 100%; max-height: 35px; height: auto;">
+    </div>
+    <div class="nav-group">MENU</div>
+    <div class="nav-item" onclick="resetHome()"><i class="fas fa-building"></i> 会社・拠点選択</div>
+    <div class="nav-item" onclick="showAlertManagementPage()"><i class="fas fa-bell"></i> アラート管理</div>
+    <div class="nav-group">MANAGEMENT</div>
+    <div class="nav-item" onclick="loadSheet('什器管理')"><i class="fas fa-chair"></i> 什器管理</div>
+    <div class="nav-item" onclick="loadSheet('設備管理')"><i class="fas fa-fan"></i> 設備管理</div>
+    <div class="nav-item" onclick="loadSheet('工事履歴')"><i class="fas fa-tools"></i> 工事履歴</div>
+    <div class="nav-group">OTHERS</div>
+    <div class="nav-item" onclick="renderVendorHierarchy()"><i class="fas fa-address-book"></i> 業者一覧</div>
+    <div class="nav-item" onclick="loadSheet('移動履歴')"><i class="fas fa-history"></i> 移動履歴</div>
+    <div class="nav-item" onclick="loadSheet('消去済み')"><i class="fas fa-trash-alt"></i> 消去済み</div>
+  </nav>
+
+  <main class="main">
+    <header class="top-bar">
+      <div style="display:flex; align-items:center; gap:15px;">
+        <div id="page-title" class="page-title">ホーム</div>
+        <button id="drawing-btn" class="btn btn-ghost" style="display:none; color:var(--brand); border:1px solid var(--brand); padding:4px 10px; font-size:12px; height:32px; white-space:nowrap;">
+          <i class="fas fa-map"></i> 図面データ
+        </button>
+      </div>
+      <div style="display:flex; align-items:center; gap:15px;">
+        <div class="search-wrap" id="search-container" style="display: none;">
+          <button class="btn btn-ghost" onclick="openColSettingModal()" title="表示項目の絞り込み" style="border: 1px solid var(--border); padding: 6px 12px;">
+            <i class="fas fa-columns"></i> 表示設定
+          </button>
+          
+          <select id="search-col-select" class="search-select" onchange="execFilter()">
+            <option value="-1">すべての項目</option>
+          </select>
+          <div class="search-box">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="search-input" class="search-input" placeholder="複数語はすべて含む (例: つくば デスク)" oninput="execFilter()">
+          </div>
+          <button class="btn btn-ghost" id="filter-toggle-btn" onclick="toggleFilterBar()" title="拠点・品目などを複数選択で絞り込み" style="border: 1px solid var(--border); padding: 6px 12px;">
+            <i class="fas fa-filter"></i> 絞り込み
+          </button>
+        </div>
+        <button class="btn-ghost" onclick="toggleTheme()" id="theme-btn" title="テーマの切り替え" style="font-size: 16px;">
+          <i class="fas fa-sun"></i>
+        </button>
+      </div>
+    </header>
+
+    <div id="filter-bar" class="filter-bar"></div>
+
+    <div id="app-content" class="content">
+      <div style="text-align:center; padding-top:50px;">
+        <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: var(--brand); margin-bottom:15px;"></i><br>
+        システム読み込み中...
+      </div>
+    </div>
+  </main>
+
+  <div id="modal-root" class="modal-overlay">
+    <div class="modal-content" id="modal-box">
+      <div class="modal-header" id="modal-header">
+        <span id="modal-title">登録・編集</span>
+        <button class="btn-ghost" onclick="closeModal()" onmousedown="event.stopPropagation()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="modal-form-area"></div>
+      <div class="modal-header" style="border-top:1px solid var(--border); border-bottom:none; justify-content:space-between; gap:10px;" id="modal-footer">
+        <div id="modal-nav-buttons"></div>
+        <div id="modal-action-buttons" style="display:flex; gap:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="col-modal-root" class="modal-overlay">
+    <div class="modal-content" style="width: 450px;">
+      <div class="modal-header">
+        <span><i class="fas fa-columns"></i> 表示項目の絞り込み</span>
+        <button class="btn-ghost" onclick="closeColModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 12px; color: var(--text-sub); margin-bottom: 15px;">見比べたい項目だけチェックを入れてください。設定はシートごとに記憶されます。</p>
+        <div id="col-modal-body" style="display: flex; flex-wrap: wrap; gap: 12px;"></div>
+      </div>
+      <div class="modal-header" style="border-top:1px solid var(--border); border-bottom:none; justify-content:flex-end;">
+        <button class="btn btn-primary" onclick="closeColModal()">適 用</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+let DATA = {};
+let STATE = { company: null, hub: null, sheet: null, rows: [], originalRows: [], headers: [] };
+
+/** TOPページの会社表示順（hub_master に無い会社は末尾に追加） */
+const COMPANY_DISPLAY_ORDER = ['リカケンホールディングス', '理科研', '並木', '片岡', 'セイミ'];
+const VENDOR_CATEGORIES = ['工事', '不動産', 'その他'];
+
+function getOrderedCompanies() {
+  const keys = Object.keys((DATA && DATA.structure) || {});
+  const ordered = COMPANY_DISPLAY_ORDER.filter(c => keys.includes(c));
+  const rest = keys.filter(c => !COMPANY_DISPLAY_ORDER.includes(c));
+  return ordered.concat(rest);
+}
+
+function formatCompanyLabel(name) {
+  if (name === 'リカケンホールディングス') return 'リカケン<br>ホールディングス';
+  return String(name || '');
+}
+
+/** 複数選択フィルタ対象の項目名（実際のシート列名） */
+const FILTERABLE_COLUMN_NAMES = [
+  '会社名', '拠点', 'フロア', '部屋、場所',
+  '品目', '設備名', '工事名',
+  'メーカー', 'メーカー名', '業者', 'カテゴリー'
+];
+
+/** 列インデックス → 選択中の値配列（空＝その項目では絞り込まない） */
+let FILTER_SELECTIONS = {};
+let filterBarOpen = false;
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function escapeAttr(str) {
+  return escapeHtml(str).replace(/'/g, '&#39;');
+}
+
+function hideFilterBar() {
+  filterBarOpen = false;
+  FILTER_SELECTIONS = {};
+  const bar = document.getElementById('filter-bar');
+  if (bar) {
+    bar.classList.remove('is-open');
+    bar.innerHTML = '';
+  }
+  const btn = document.getElementById('filter-toggle-btn');
+  if (btn) btn.classList.remove('has-selection');
+}
+
+function toggleFilterBar() {
+  filterBarOpen = !filterBarOpen;
+  const bar = document.getElementById('filter-bar');
+  if (!bar) return;
+  if (filterBarOpen) {
+    buildFilterBar();
+    bar.classList.add('is-open');
+  } else {
+    bar.classList.remove('is-open');
+  }
+}
+
+function getFilterableColumnIndexes() {
+  const headers = STATE.headers || [];
+  return FILTERABLE_COLUMN_NAMES
+    .map(name => headers.indexOf(name))
+    .filter(i => i >= 0);
+}
+
+function getUniqueValuesForColumn(colIndex) {
+  const set = new Set();
+  (STATE.originalRows || []).forEach(row => {
+    const v = String(row[colIndex] == null ? '' : row[colIndex]).trim();
+    if (v) set.add(v);
+  });
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'ja'));
+}
+
+function buildFilterBar() {
+  const bar = document.getElementById('filter-bar');
+  if (!bar) return;
+
+  let html = `<span class="filter-hint"><i class="fas fa-info-circle"></i> 同じ項目内は「いずれか」、項目どうしと検索語は「すべて満たす」</span>`;
+  let hasAny = false;
+
+  getFilterableColumnIndexes().forEach(colIndex => {
+    const values = getUniqueValuesForColumn(colIndex);
+    if (values.length < 2) return; // 1種類しかない項目は出さない
+    hasAny = true;
+    const colName = STATE.headers[colIndex];
+    const selected = FILTER_SELECTIONS[colIndex] || [];
+    const btnClass = selected.length ? 'filter-btn has-selection' : 'filter-btn';
+    const label = selected.length ? `${colName} (${selected.length})` : colName;
+
+    html += `<div class="filter-dropdown" data-filter-col="${colIndex}">
+      <button type="button" class="${btnClass}" onclick="toggleFilterMenu(${colIndex}, event)">${escapeHtml(label)} <i class="fas fa-caret-down"></i></button>
+      <div class="filter-menu" id="filter-menu-${colIndex}">
+        ${values.map(v => {
+          const checked = selected.includes(v) ? 'checked' : '';
+          return `<label><input type="checkbox" value="${escapeAttr(v)}" ${checked} onchange="onFilterCheckboxChange(${colIndex})"><span>${escapeHtml(v)}</span></label>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+
+  if (!hasAny) {
+    html += `<span class="filter-hint">この一覧では複数選択できる項目がありません</span>`;
+  } else {
+    html += `<button type="button" class="btn btn-ghost" style="border:1px solid var(--border); padding:6px 10px; font-size:12px;" onclick="clearAllFilters()">クリア</button>`;
+  }
+
+  bar.innerHTML = html;
+  updateFilterToggleBtn();
+}
+
+function toggleFilterMenu(colIndex, event) {
+  if (event) event.stopPropagation();
+  const menu = document.getElementById('filter-menu-' + colIndex);
+  if (!menu) return;
+  const willOpen = !menu.classList.contains('open');
+  document.querySelectorAll('.filter-menu.open').forEach(m => m.classList.remove('open'));
+  if (willOpen) menu.classList.add('open');
+}
+
+function onFilterCheckboxChange(colIndex) {
+  const menu = document.getElementById('filter-menu-' + colIndex);
+  if (!menu) return;
+  const selected = Array.from(menu.querySelectorAll('input[type="checkbox"]:checked')).map(el => el.value);
+  if (selected.length) FILTER_SELECTIONS[colIndex] = selected;
+  else delete FILTER_SELECTIONS[colIndex];
+  buildFilterBar();
+  const reopened = document.getElementById('filter-menu-' + colIndex);
+  if (reopened) reopened.classList.add('open');
+  execFilter();
+}
+
+function clearAllFilters() {
+  FILTER_SELECTIONS = {};
+  buildFilterBar();
+  execFilter();
+}
+
+function updateFilterToggleBtn() {
+  const btn = document.getElementById('filter-toggle-btn');
+  if (!btn) return;
+  const count = Object.keys(FILTER_SELECTIONS).length;
+  btn.classList.toggle('has-selection', count > 0);
+  btn.innerHTML = count > 0
+    ? `<i class="fas fa-filter"></i> 絞り込み (${count})`
+    : `<i class="fas fa-filter"></i> 絞り込み`;
+}
+
+function getAllHubsFlat() {
+  const hubs = [];
+  const seen = new Set();
+  getOrderedCompanies().forEach(company => {
+    ((DATA.structure && DATA.structure[company]) || []).forEach(hub => {
+      const key = String(hub).trim();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        hubs.push(key);
+      }
+    });
+  });
+  return hubs.sort((a, b) => a.localeCompare(b, 'ja'));
+}
+
+function getSelectedGlobalHubs() {
+  return Array.from(document.querySelectorAll('#global-hub-filters input[type="checkbox"]:checked')).map(el => el.value);
+}
+
+function toggleGlobalHubFilter() {
+  const box = document.getElementById('global-filter-box');
+  if (box) box.classList.toggle('open');
+}
+
+function updateGlobalHubSelectedCount() {
+  const el = document.getElementById('global-hub-selected-count');
+  if (!el) return;
+  const n = getSelectedGlobalHubs().length;
+  el.textContent = n > 0 ? `（${n}件選択中）` : '';
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.filter-dropdown')) {
+    document.querySelectorAll('.filter-menu.open').forEach(m => m.classList.remove('open'));
+  }
+});
+
+let SORT_STATE = { colIndex: -1, isAsc: true };
+
+// 列の表示・非表示を管理する配列
+let hiddenCols = [];
+
+let modalBox, modalHeader;
+let isDraggingModal = false;
+let modalOffsetX = 0;
+let modalOffsetY = 0;
+
+function formatCurrency(val) {
+  if (!val) return val;
+  const num = Number(String(val).replace(/,/g, ''));
+  if (!isNaN(num) && String(val).trim() !== '') {
+    return num.toLocaleString();
+  }
+  return val;
+}
+
+function initTheme() {
+  const isLight = localStorage.getItem('rikaken_theme') === 'light';
+  const btn = document.getElementById('theme-btn');
+  if (isLight) {
+    document.body.classList.add('light-mode');
+    btn.innerHTML = '<i class="fas fa-moon"></i>';
+  } else {
+    document.body.classList.remove('light-mode');
+    btn.innerHTML = '<i class="fas fa-sun"></i>';
+  }
+}
+
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-mode');
+  localStorage.setItem('rikaken_theme', isLight ? 'light' : 'dark');
+  document.getElementById('theme-btn').innerHTML = isLight ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+}
+
+// カラムリサイズ関連
+let isResizing = false;
+let currentTh = null;
+let startX = 0;
+let startWidth = 0;
+
+document.addEventListener('mousemove', function(e) {
+  if (!isResizing || !currentTh) return;
+  const diffX = e.pageX - startX;
+  const newWidth = Math.max(50, startWidth + diffX);
+  currentTh.style.width = newWidth + 'px';
+});
+
+document.addEventListener('mouseup', function(e) {
+  if (isResizing && currentTh) {
+    isResizing = false;
+    const colName = currentTh.getAttribute('data-colname');
+    if (colName) {
+      localStorage.setItem(`colwidth_${STATE.sheet}_${colName}`, currentTh.offsetWidth);
+    }
+    currentTh.querySelector('.resizer').classList.remove('resizing');
+    currentTh = null;
+    document.body.style.cursor = 'default';
+  }
+});
+
+function initTableResizer() {
+  const table = document.querySelector('table');
+  if (!table) return;
+  const ths = table.querySelectorAll('th');
+  ths.forEach(th => {
+    if (th.innerText.includes('操作')) return;
+    const resizer = document.createElement('div');
+    resizer.classList.add('resizer');
+    th.appendChild(resizer);
+    resizer.addEventListener('mousedown', function(e) {
+      isResizing = true;
+      currentTh = th;
+      startX = e.pageX;
+      startWidth = th.offsetWidth;
+      resizer.classList.add('resizing');
+      document.body.style.cursor = 'col-resize';
+      e.stopPropagation();
+      e.preventDefault(); 
+    });
+  });
+}
+
+// ▼ 列のドラッグ＆ドロップ（GAS iframeでも確実に動くよう setData / preventDefault を明示）
+let dragSrcColIndex = null;
+let colDragInsertAfter = false;
+let colDragMoved = false;
+
+function getColOrder() {
+  let colOrder = null;
+  try { colOrder = JSON.parse(localStorage.getItem('colOrder_' + STATE.sheet)); } catch (err) { colOrder = null; }
+  if (!colOrder || !Array.isArray(colOrder) || colOrder.length !== STATE.headers.length) {
+    colOrder = STATE.headers.map((_, i) => i);
+  }
+  return colOrder;
+}
+
+function handleColDragStart(e, index) {
+  if (isResizing) { e.preventDefault(); return; }
+  dragSrcColIndex = index;
+  colDragMoved = false;
+  colDragInsertAfter = false;
+  try {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  } catch (err) { /* ignore */ }
+  const th = e.target.closest('th');
+  if (th) th.classList.add('dragging');
+}
+
+function handleColDragOver(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  try { e.dataTransfer.dropEffect = 'move'; } catch (err) { /* ignore */ }
+  const th = e.target.closest('th');
+  if (!th || th.innerText.includes('操作')) return false;
+  document.querySelectorAll('th').forEach(t => {
+    if (t !== th) t.classList.remove('drag-over-left', 'drag-over-right');
+  });
+  const rect = th.getBoundingClientRect();
+  colDragInsertAfter = (e.clientX - rect.left) >= (rect.width / 2);
+  if (colDragInsertAfter) {
+    th.classList.add('drag-over-right');
+    th.classList.remove('drag-over-left');
+  } else {
+    th.classList.add('drag-over-left');
+    th.classList.remove('drag-over-right');
+  }
+  return false;
+}
+
+function handleColDrop(e, targetIndex) {
+  e.preventDefault();
+  e.stopPropagation();
+  const th = e.target.closest('th');
+  if (th) th.classList.remove('drag-over-left', 'drag-over-right');
+
+  let srcIndex = dragSrcColIndex;
+  try {
+    const raw = e.dataTransfer.getData('text/plain');
+    if (raw !== '' && raw != null) srcIndex = parseInt(raw, 10);
+  } catch (err) { /* ignore */ }
+
+  if (srcIndex == null || isNaN(srcIndex) || srcIndex === targetIndex) {
+    dragSrcColIndex = null;
+    return false;
+  }
+
+  let colOrder = getColOrder();
+  const srcPos = colOrder.indexOf(srcIndex);
+  let targetPos = colOrder.indexOf(targetIndex);
+  if (srcPos < 0 || targetPos < 0) {
+    dragSrcColIndex = null;
+    return false;
+  }
+
+  if (colDragInsertAfter || (th && th.classList.contains('drag-over-right'))) {
+    targetPos++;
+  }
+
+  colOrder.splice(srcPos, 1);
+  if (srcPos < targetPos) targetPos--;
+  colOrder.splice(targetPos, 0, srcIndex);
+
+  localStorage.setItem('colOrder_' + STATE.sheet, JSON.stringify(colOrder));
+  colDragMoved = true;
+  dragSrcColIndex = null;
+  renderTable();
+  return false;
+}
+
+function handleColDragLeave(e) {
+  const th = e.target.closest('th');
+  if (!th) return;
+  const related = e.relatedTarget;
+  if (related && th.contains(related)) return;
+  th.classList.remove('drag-over-left', 'drag-over-right');
+}
+
+function handleColDragEnd(e) {
+  const th = e.target.closest('th');
+  if (th) th.classList.remove('dragging');
+  document.querySelectorAll('th').forEach(t => t.classList.remove('drag-over-left', 'drag-over-right'));
+  dragSrcColIndex = null;
+}
+
+function handleColHeaderClick(colIndex) {
+  if (colDragMoved) {
+    colDragMoved = false;
+    return;
+  }
+  sortTable(colIndex);
+}
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDraggingModal || !modalBox) return;
+  modalBox.style.left = (e.clientX - modalOffsetX) + 'px';
+  modalBox.style.top = (e.clientY - modalOffsetY) + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+  isDraggingModal = false;
+});
+
+function resetModalPosition() {
+  if (!modalBox) return;
+  modalBox.style.position = "relative";
+  modalBox.style.left = "auto";
+  modalBox.style.top = "auto";
+  modalBox.style.margin = "auto";
+}
+
+window.onload = function() {
+  initTheme();
+  modalBox = document.getElementById('modal-box');
+  modalHeader = document.getElementById('modal-header');
+  
+  if (modalHeader) {
+    modalHeader.addEventListener('mousedown', (e) => {
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+      isDraggingModal = true;
+      const rect = modalBox.getBoundingClientRect();
+      modalOffsetX = e.clientX - rect.left;
+      modalOffsetY = e.clientY - rect.top;
+      modalBox.style.margin = "0";
+      modalBox.style.position = "absolute";
+    });
+  }
+
+  google.script.run
+    .withFailureHandler(function(err) {
+      document.getElementById('app-content').innerHTML = `
+        <div style="color:#ff6b6b; text-align:center; padding:50px; background:var(--bg-panel); border-radius:8px; margin:20px;">
+          <h3><i class="fas fa-exclamation-triangle"></i> サーバーとの通信に失敗しました</h3>
+          <p>${err.message}</p>
+        </div>`;
+    })
+    .withSuccessHandler(function(initData) {
+      DATA = initData;
+      renderCompanySelect();
+      checkGlobalAlerts();
+    })
+    .getInitData();
+};
+
+let ALERT_MGMT_FILTER = 'active';
+
+function checkGlobalAlerts() {
+  google.script.run.withSuccessHandler(alerts => {
+    const banner = document.getElementById('alert-banner-area');
+    if (!banner) return;
+    if (alerts && alerts.length > 0) {
+      banner.style.display = 'block';
+      banner.innerHTML = `
+        <h3><i class="fas fa-exclamation-triangle"></i> 対応が必要な項目が ${alerts.length} 件あります
+          <button class="btn btn-ghost" style="margin-left:10px; border:1px solid var(--alert-text); color:var(--alert-text); padding:4px 10px; font-size:12px;" onclick="showAlertManagementPage()">アラート管理へ</button>
+        </h3>
+        <ul class="alert-list">
+          ${alerts.slice(0, 8).map(a => `
+            <li class="alert-item" onclick="jumpToAlert('${String(a.company||'').replace(/'/g,"\\'")}', '${String(a.hub||'').replace(/'/g,"\\'")}', '${String(a.sheet||'').replace(/'/g,"\\'")}')">
+              <b>[${escapeHtml(a.company)} / ${escapeHtml(a.hub)}] ${escapeHtml(a.sheet)}</b>: ${escapeHtml(a.name)} (${escapeHtml(a.id)}) <br>
+              <span style="color:${a.isOverdue ? '#ff6b6b':'#ffd700'}">期限: ${escapeHtml(a.date)} ${a.isOverdue ? '(期限切れ)':''} / ${a.leadDays || 30}日前から</span>
+            </li>`).join('')}
+        </ul>
+        ${alerts.length > 8 ? `<div style="font-size:12px; margin-top:8px;">他 ${alerts.length - 8} 件はアラート管理で確認できます。</div>` : ''}`;
+    } else {
+      banner.style.display = 'none';
+      banner.innerHTML = '';
+    }
+  }).getGlobalAlerts();
+}
+
+function showAlertManagementPage(filter) {
+  if (filter) ALERT_MGMT_FILTER = filter;
+  document.getElementById('search-container').style.display = 'none';
+  document.getElementById('drawing-btn').style.display = 'none';
+  hideFilterBar();
+  STATE.company = null; STATE.hub = null; STATE.sheet = 'アラート管理';
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const nav = document.querySelector('.nav-item[onclick="showAlertManagementPage()"]');
+  if (nav) nav.classList.add('active');
+  document.getElementById('page-title').innerText = 'アラート管理';
+  document.getElementById('app-content').innerHTML = '<div style="padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i> アラート取得中...</div>';
+
+  google.script.run.withSuccessHandler(renderAlertManagementPage)
+    .withFailureHandler(err => {
+      document.getElementById('app-content').innerHTML = `<div style="padding:30px; color:var(--alert-text);">取得に失敗しました: ${escapeHtml(err.message)}</div>`;
+    })
+    .getAlertManagementList(ALERT_MGMT_FILTER);
+}
+
+function showGlobalAlertsPage() {
+  showAlertManagementPage('active');
+}
+
+function renderAlertManagementPage(alerts) {
+  const list = alerts || [];
+  const titles = {
+    active: '対応が必要（通知ON・表示期間内）',
+    off: '通知OFF',
+    all: '設定あり（すべて）'
+  };
+  let html = `<div class="selection-screen" style="max-width: 1100px; margin: 0 auto; text-align: left;">
+    <h2 style="margin-bottom:10px;"><i class="fas fa-bell" style="color:var(--alert-text);"></i> アラート管理</h2>
+    <p class="alert-hint">TOPの通知には「対応が必要」のみ表示されます。延期・今年完了・ON/OFFはここから操作できます。今年完了は予定日を1年後にし、通知はONのままです。</p>
+    <div class="alert-tabs">
+      <button type="button" class="alert-tab ${ALERT_MGMT_FILTER === 'active' ? 'active' : ''}" onclick="showAlertManagementPage('active')">対応が必要</button>
+      <button type="button" class="alert-tab ${ALERT_MGMT_FILTER === 'off' ? 'active' : ''}" onclick="showAlertManagementPage('off')">通知OFF</button>
+      <button type="button" class="alert-tab ${ALERT_MGMT_FILTER === 'all' ? 'active' : ''}" onclick="showAlertManagementPage('all')">すべて</button>
+    </div>
+    <h3 style="margin: 0 0 12px; font-size:15px;">${titles[ALERT_MGMT_FILTER] || ''}（${list.length}件）</h3>`;
+
+  if (!list.length) {
+    html += `<div style="padding: 30px; text-align: center; color: var(--text-sub); background: var(--bg-panel); border-radius: 8px; border: 1px solid var(--border);">該当するデータはありません。</div>`;
+  } else {
+    html += `<div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; overflow: auto;">
+      <table style="width: 100%; min-width: 900px;">
+        <thead><tr>
+          <th>会社 / 拠点</th><th>シート</th><th>品目 / 管理番号</th>
+          <th>予定日</th><th>表示開始</th><th>繰り返し</th><th>操作</th>
+        </tr></thead><tbody>`;
+    list.forEach((a, idx) => {
+      const company = String(a.company || '').replace(/'/g, "\\'");
+      const hub = String(a.hub || '').replace(/'/g, "\\'");
+      const sheet = String(a.sheet || '').replace(/'/g, "\\'");
+      const id = String(a.id || '').replace(/'/g, "\\'");
+      html += `<tr>
+        <td onclick="jumpToAlert('${company}', '${hub}', '${sheet}')" style="cursor:pointer;">${escapeHtml(a.company)}<br><span style="font-size:10px;color:var(--text-sub);">${escapeHtml(a.hub)}</span></td>
+        <td onclick="jumpToAlert('${company}', '${hub}', '${sheet}')" style="cursor:pointer;">${escapeHtml(a.sheet)}</td>
+        <td onclick="jumpToAlert('${company}', '${hub}', '${sheet}')" style="cursor:pointer;">${escapeHtml(a.name)}<br><span style="font-size:10px;color:var(--text-sub);">${escapeHtml(a.id)}</span></td>
+        <td style="color:${a.isOverdue ? 'var(--alert-text)' : '#ffd700'};">${escapeHtml(a.date)}${a.isOverdue ? '<br><span style="font-size:10px;">(期限切れ)</span>' : ''}${a.flag === '無' ? '<br><span style="font-size:10px;">通知OFF</span>' : ''}</td>
+        <td>${a.leadDays || 30}日前</td>
+        <td>${escapeHtml(a.repeat || 'なし')}</td>
+        <td onclick="event.stopPropagation();">
+          <div class="alert-actions">
+            <button type="button" class="btn btn-ghost" style="border:1px solid var(--border);" onclick="openAlertDeferDialog('${sheet}', '${id}')">延期</button>
+            <button type="button" class="btn btn-ghost" style="border:1px solid var(--border);" onclick="completeAlertYear('${sheet}', '${id}')">今年完了</button>
+            ${a.flag === '有'
+              ? `<button type="button" class="btn btn-ghost" style="border:1px solid var(--border);" onclick="setAlertFlag('${sheet}', '${id}', '無')">通知OFF</button>`
+              : `<button type="button" class="btn btn-ghost" style="border:1px solid var(--brand); color:var(--brand);" onclick="setAlertFlag('${sheet}', '${id}', '有')">通知ON</button>`}
+          </div>
+        </td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+  html += `</div>`;
+  document.getElementById('app-content').innerHTML = html;
+}
+
+function openAlertDeferDialog(sheetName, id) {
+  const choice = prompt(
+    `【延期】管理番号: ${id}\n\n` +
+    `次のどちらかを入力してください。\n` +
+    `・日数: 7 / 14 / 30 / 60\n` +
+    `・日付: YYYY-MM-DD または YYYY/MM/DD\n\n` +
+    `例: 30  または  2026-09-01`
+  );
+  if (choice === null) return;
+  const raw = String(choice).trim();
+  if (!raw) return;
+
+  if (/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/.test(raw)) {
+    runAlertAction({ sheetName, id, action: 'deferDate', date: raw.replace(/-/g, '/'), refreshFilter: ALERT_MGMT_FILTER });
+    return;
+  }
+  const days = Number(raw);
+  if ([7, 14, 30, 60].includes(days)) {
+    runAlertAction({ sheetName, id, action: 'deferDays', days, refreshFilter: ALERT_MGMT_FILTER });
+    return;
+  }
+  alert('入力が正しくありません。7/14/30/60 の日数、または日付を入力してください。');
+}
+
+function completeAlertYear(sheetName, id) {
+  if (!confirm(`管理番号 [${id}] の今年の対応を完了します。\n予定日を1年後に進め、通知はONのままにします。よろしいですか？`)) return;
+  runAlertAction({ sheetName, id, action: 'completeYear', refreshFilter: ALERT_MGMT_FILTER });
+}
+
+function setAlertFlag(sheetName, id, flag) {
+  const msg = flag === '有'
+    ? `管理番号 [${id}] の通知をONにします。よろしいですか？`
+    : `管理番号 [${id}] の通知をOFFにします。\nTOPには表示されなくなります（アラート管理の「通知OFF」から確認できます）。よろしいですか？`;
+  if (!confirm(msg)) return;
+  runAlertAction({ sheetName, id, action: 'setFlag', flag, refreshFilter: ALERT_MGMT_FILTER });
+}
+
+function runAlertAction(payload) {
+  document.getElementById('app-content').innerHTML = '<div style="padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i> 更新中...</div>';
+  google.script.run
+    .withSuccessHandler(list => {
+      renderAlertManagementPage(list);
+      checkGlobalAlerts();
+    })
+    .withFailureHandler(err => {
+      alert('更新に失敗しました: ' + err.message);
+      showAlertManagementPage(ALERT_MGMT_FILTER);
+    })
+    .updateAlertRecord(payload);
+}
+
+function jumpToAlert(company, hub, sheet) {
+  STATE.company = company;
+  STATE.hub = hub;
+  loadSheet(sheet);
+}
+
+function renderCompanySelect() {
+  document.getElementById('search-container').style.display = 'none'; 
+  document.getElementById('drawing-btn').style.display = 'none';
+  hideFilterBar();
+  STATE.company = null; STATE.hub = null;
+  SORT_STATE = { colIndex: -1, isAsc: true }; 
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelector('.nav-item[onclick="resetHome()"]').classList.add('active');
+
+  const companies = getOrderedCompanies();
+  const hubs = getAllHubsFlat();
+  let html = `
+    <div class="selection-screen">
+      <div style="margin: 0 auto 12px; max-width: 600px; display:flex; gap:10px; background: var(--bg-panel); padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+         <input type="text" id="global-search-input" class="form-input" style="flex:1;" placeholder="複数語はすべて含む (例: デスク)" onkeypress="if(event.key === 'Enter') execGlobalSearch()">
+         <button class="btn btn-primary" onclick="execGlobalSearch()"><i class="fas fa-search"></i> 全体検索</button>
+      </div>
+      <div class="global-filter-box" id="global-filter-box">
+        <button type="button" class="global-filter-toggle" onclick="toggleGlobalHubFilter()">
+          <span><i class="fas fa-filter"></i> 拠点で絞り込み（複数選択可・未選択なら全拠点）<span id="global-hub-selected-count"></span></span>
+          <i class="fas fa-caret-down caret"></i>
+        </button>
+        <div class="global-filter-body">
+          <div class="global-filter-checks" id="global-hub-filters">
+            ${hubs.map(h => `<label><input type="checkbox" value="${escapeAttr(h)}" onchange="updateGlobalHubSelectedCount()"><span>${escapeHtml(h)}</span></label>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div id="alert-banner-area" class="alert-banner"></div>
+      <h2><i class="fas fa-building"></i> 管理会社を選択してください</h2>
+      <div class="grid-container">
+        ${companies.map(c => `<div class="card-btn" onclick="selectCompany('${c}')"><h3>${formatCompanyLabel(c)}</h3></div>`).join('')}
+      </div>
+    </div>`;
+  document.getElementById('app-content').innerHTML = html;
+  document.getElementById('page-title').innerText = "ホーム (全体検索・会社選択)";
+}
+
+function execGlobalSearch() {
+  const kw = document.getElementById('global-search-input').value.trim();
+  if(!kw) return;
+  const selectedHubs = getSelectedGlobalHubs();
+  document.getElementById('app-content').innerHTML = '<div style="padding:50px; text-align:center;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:var(--brand); margin-bottom:15px;"></i><br>全シートを検索しています...</div>';
+  google.script.run.withSuccessHandler(results => {
+    renderGlobalSearchResults(results, selectedHubs, kw);
+  }).searchAll(kw);
+}
+
+function renderGlobalSearchResults(results, selectedHubs, keyword) {
+  document.getElementById('drawing-btn').style.display = 'none';
+  hideFilterBar();
+  const hubs = selectedHubs || [];
+  let filtered = results || [];
+  if (hubs.length) {
+    const hubSet = new Set(hubs.map(h => String(h).trim()));
+    filtered = filtered.filter(r => hubSet.has(String(r.hub || '').trim()));
+  }
+  const hubNote = hubs.length ? ` / 拠点: ${hubs.join('・')}` : '';
+  let html = `<div class="selection-screen" style="max-width: 900px; margin: 0 auto; text-align: left;">
+                <button class="btn btn-ghost" style="margin-bottom:15px;" onclick="renderCompanySelect()">← ホームに戻る</button>
+                <h2 style="margin-bottom:8px;"><i class="fas fa-search"></i> 検索結果 (${filtered.length}件)</h2>
+                <div style="font-size:12px; color:var(--text-sub); margin-bottom:16px;">キーワード「${escapeHtml(keyword || '')}」（すべて含む）${escapeHtml(hubNote)}</div>`;
+  if (filtered.length === 0) {
+    html += `<div style="padding: 30px; text-align: center; color: var(--text-sub); background: var(--bg-panel); border-radius: 8px; border: 1px solid var(--border);">一致するデータは見つかりませんでした。<br><span style="font-size:12px;">拠点の複数選択とキーワードを組み合わせて再検索してください。</span></div>`;
+  } else {
+    html += `<div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+              <table style="width: 100%;">
+                <thead><tr><th style="width:120px;">シート名</th><th style="width:150px;">会社 / 拠点</th><th style="width:150px;">管理番号</th><th>データ抜粋</th></tr></thead><tbody>`;
+    filtered.forEach(r => {
+      const company = String(r.company || '').replace(/'/g, "\\'");
+      const hub = String(r.hub || '').replace(/'/g, "\\'");
+      const sheet = String(r.sheet || '').replace(/'/g, "\\'");
+      const id = String(r.id || '').replace(/'/g, "\\'");
+      html += `<tr onclick="jumpToSearchResult('${company}', '${hub}', '${sheet}', '${id}')" style="cursor: pointer;">
+                 <td>${escapeHtml(r.sheet)}</td>
+                 <td>${escapeHtml(r.company)}<br><span style="font-size: 10px; color: var(--text-sub);">${escapeHtml(r.hub)}</span></td>
+                 <td style="color:var(--brand); font-weight:bold;">${escapeHtml(r.id)}</td>
+                 <td style="color:var(--text-sub); font-size:11px;">${escapeHtml(r.snippet)}</td>
+               </tr>`;
+    });
+    html += `   </tbody></table></div>`;
+  }
+  html += `</div>`;
+  document.getElementById('app-content').innerHTML = html;
+}
+
+function jumpToSearchResult(company, hub, sheet, id, openDetail = true) {
+  STATE.company = company;
+  STATE.hub = hub;
+  loadSheet(sheet, id, openDetail);
+}
+
+function selectCompany(name) {
+  document.getElementById('search-container').style.display = 'none';
+  document.getElementById('drawing-btn').style.display = 'none';
+  hideFilterBar();
+  STATE.company = name;
+  const hubs = DATA.structure[name];
+  let html = `
+    <div class="selection-screen">
+      <button class="btn btn-ghost" onclick="renderCompanySelect()">← 戻る</button>
+      <h2><i class="fas fa-map-marker-alt"></i> ${name} の拠点を選択</h2>
+      <div class="grid-container">
+        ${hubs.map(h => `<div class="card-btn" onclick="selectHub('${h}')"><h3>${h}</h3></div>`).join('')}
+      </div>
+    </div>`;
+  document.getElementById('app-content').innerHTML = html;
+}
+
+function selectHub(hub) {
+  STATE.hub = hub;
+  loadSheet('什器管理');
+}
+
+function renderVendorHierarchy() {
+  document.getElementById('search-container').style.display = 'none'; 
+  document.getElementById('drawing-btn').style.display = 'none';
+  hideFilterBar();
+  STATE.sheet = '業者一覧';
+  STATE.hub = null; 
+  SORT_STATE = { colIndex: -1, isAsc: true }; 
+
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.remove('active');
+    if (el.textContent.includes('業者一覧')) el.classList.add('active');
+  });
+
+  document.getElementById('page-title').innerText = "業者一覧 (カテゴリ選択)";
+
+  let html = `
+    <div class="selection-screen">
+      <h2><i class="fas fa-tags"></i> 業者カテゴリーを選択</h2>
+      <div class="grid-container" style="max-width: 600px;">
+        <div class="card-btn" onclick="loadVendorCategory('工事')"><h3><i class="fas fa-tools"></i> 工事</h3></div>
+        <div class="card-btn" onclick="loadVendorCategory('不動産')"><h3><i class="fas fa-building"></i> 不動産</h3></div>
+        <div class="card-btn" onclick="loadVendorCategory('その他')"><h3><i class="fas fa-ellipsis-h"></i> その他</h3></div>
+        <div class="card-btn" onclick="loadVendorCategory('すべて')"><h3><i class="fas fa-list"></i> すべて表示</h3></div>
+      </div>
+    </div>`;
+  document.getElementById('app-content').innerHTML = html;
+}
+
+function loadVendorCategory(category) {
+  document.getElementById('page-title').innerText = category === 'すべて' ? '業者一覧 (すべて)' : `業者一覧 (${category})`;
+  document.getElementById('app-content').innerHTML = '<div style="padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i> データ読み込み中...</div>';
+
+  google.script.run.withSuccessHandler(res => {
+    STATE.headers = res.headers;
+    if (category === 'すべて') {
+      STATE.originalRows = res.rows;
+    } else {
+      const catIdx = res.headers.indexOf('カテゴリー');
+      STATE.originalRows = res.rows.filter(r => r[catIdx] === category);
+    }
+    STATE.rows = [...STATE.originalRows];
+    updateSearchOptions();
+    renderTable(); 
+  }).getSheetData(null, '業者一覧');
+}
+
+function loadSheet(sheetName, autoSearchKeyword = null, openDetailOnLoad = true) {
+  STATE.sheet = sheetName;
+  SORT_STATE = { colIndex: -1, isAsc: true }; 
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.remove('active');
+    if (el.textContent.includes(sheetName)) el.classList.add('active');
+  });
+
+  const drawingBtn = document.getElementById('drawing-btn');
+  
+  if (sheetName === '消去済み' || sheetName === '移動履歴' || sheetName === '業者一覧') {
+    document.getElementById('page-title').innerText = sheetName;
+    drawingBtn.style.display = 'none';
+  } else if (STATE.hub) {
+    document.getElementById('page-title').innerText = `${STATE.company} / ${STATE.hub}`;
+    const drawingUrl = DATA.drawingUrls ? DATA.drawingUrls[`${STATE.company}_${STATE.hub}`] : null;
+    if (drawingUrl) {
+      drawingBtn.style.display = 'inline-flex';
+      drawingBtn.onclick = () => window.open(drawingUrl, '_blank');
+    } else {
+      drawingBtn.style.display = 'none';
+    }
+  } else {
+    document.getElementById('page-title').innerText = `全拠点 最新20件 (${sheetName})`;
+    drawingBtn.style.display = 'none';
+  }
+
+  document.getElementById('app-content').innerHTML = '<div style="padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i> データ読み込み中...</div>';
+
+  google.script.run.withSuccessHandler(res => {
+    STATE.headers = res.headers;
+    STATE.rows = res.rows;
+    STATE.originalRows = [...res.rows]; 
+    updateSearchOptions(); 
+    renderTable();
+
+    if (autoSearchKeyword) {
+      document.getElementById('search-input').value = autoSearchKeyword;
+      execFilter();
+      if (openDetailOnLoad) {
+        setTimeout(() => openDetailModal(autoSearchKeyword), 300);
+      }
+    }
+  }).getSheetData(STATE.hub, sheetName);
+}
+
+function updateSearchOptions() {
+  const container = document.getElementById('search-container');
+  const select = document.getElementById('search-col-select');
+  const input = document.getElementById('search-input');
+  container.style.display = 'flex'; 
+  let html = '<option value="-1">すべての項目</option>';
+  if (STATE.headers) {
+    STATE.headers.forEach((h, i) => {
+      if (!h.includes('画像') && !h.includes('添付') && !h.includes('URL') && !h.startsWith('アラート')) {
+        html += `<option value="${i}">${h}</option>`;
+      }
+    });
+  }
+  select.innerHTML = html;
+  input.value = '';
+  FILTER_SELECTIONS = {};
+  if (filterBarOpen) buildFilterBar();
+  else {
+    const bar = document.getElementById('filter-bar');
+    if (bar) {
+      bar.classList.remove('is-open');
+      bar.innerHTML = '';
+    }
+    updateFilterToggleBtn();
+  }
+}
+
+function parseSearchKeywords(raw) {
+  return String(raw || '').toLowerCase().trim().split(/[\s　,、]+/).filter(kw => kw.length > 0);
+}
+
+function rowMatchesFilters(row) {
+  const entries = Object.keys(FILTER_SELECTIONS);
+  if (!entries.length) return true;
+  return entries.every(colKey => {
+    const colIndex = parseInt(colKey, 10);
+    const selected = FILTER_SELECTIONS[colKey] || [];
+    if (!selected.length) return true;
+    const cell = String(row[colIndex] == null ? '' : row[colIndex]).trim();
+    return selected.includes(cell);
+  });
+}
+
+function execFilter() {
+  if (!STATE.originalRows) return;
+  const keywordInput = document.getElementById('search-input').value;
+  const colSelect = document.getElementById('search-col-select');
+  const colIdx = colSelect ? parseInt(colSelect.value, 10) : -1;
+  const keywords = parseSearchKeywords(keywordInput);
+
+  STATE.rows = STATE.originalRows.filter(row => {
+    if (!rowMatchesFilters(row)) return false;
+    if (!keywords.length) return true;
+    return keywords.every(kw => {
+      if (colIdx === -1) {
+        return row.some(cell => String(cell).toLowerCase().includes(kw));
+      }
+      return String(row[colIdx]).toLowerCase().includes(kw);
+    });
+  });
+  SORT_STATE = { colIndex: -1, isAsc: true }; 
+  renderTable(); 
+}
+
+function openColSettingModal() {
+  let html = '';
+  STATE.headers.forEach((h, i) => {
+    const isChecked = !hiddenCols.includes(i) ? 'checked' : '';
+    html += `
+      <label style="display:flex; align-items:center; gap:8px; width:45%; font-size:13px; cursor:pointer; padding:5px; border-radius:4px; background:var(--bg-dark);">
+        <input type="checkbox" onchange="toggleCol(${i}, this.checked)" ${isChecked}>
+        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${h}</span>
+      </label>`;
+  });
+  document.getElementById('col-modal-body').innerHTML = html;
+  document.getElementById('col-modal-root').style.display = 'flex';
+}
+
+function closeColModal() {
+  document.getElementById('col-modal-root').style.display = 'none';
+}
+
+function toggleCol(index, isVisible) {
+  if(isVisible) {
+    hiddenCols = hiddenCols.filter(c => c !== index); 
+  } else {
+    if(!hiddenCols.includes(index)) hiddenCols.push(index); 
+  }
+  localStorage.setItem('hiddenCols_' + STATE.sheet, JSON.stringify(hiddenCols));
+  renderTable(); 
+}
+
+function sortTable(colIndex) {
+  if (SORT_STATE.colIndex === colIndex) {
+    SORT_STATE.isAsc = !SORT_STATE.isAsc; 
+  } else {
+    SORT_STATE.colIndex = colIndex;
+    SORT_STATE.isAsc = true; 
+  }
+  
+  STATE.rows.sort((a, b) => {
+    let valA = a[colIndex] !== undefined && a[colIndex] !== null ? a[colIndex] : '';
+    let valB = b[colIndex] !== undefined && b[colIndex] !== null ? b[colIndex] : '';
+
+    let numA = Number(String(valA).replace(/,/g, ''));
+    let numB = Number(String(valB).replace(/,/g, ''));
+
+    if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+      return SORT_STATE.isAsc ? numA - numB : numB - numA;
+    }
+
+    let dateA = new Date(String(valA).replace(/-/g, '/'));
+    let dateB = new Date(String(valB).replace(/-/g, '/'));
+    if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime()) && String(valA).match(/^[0-9]{4}[\/\-][0-9]{2}[\/\-][0-9]{2}/)) {
+       return SORT_STATE.isAsc ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+    }
+
+    return SORT_STATE.isAsc ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+  });
+  renderTable();
+}
+
+function handleMoveHistoryClick(rowIndex) {
+  const headers = STATE.headers || [];
+  const row = (STATE.rows && STATE.rows[rowIndex]) ? STATE.rows[rowIndex] : null;
+  if (!row) return;
+
+  const dstLocIdx = headers.indexOf('新会社・拠点');
+  const idIdx = headers.findIndex(h => h.includes('管理番号'));
+  const dstLoc = dstLocIdx > -1 ? String(row[dstLocIdx] || '').trim() : '';
+  const id = idIdx > -1 ? String(row[idIdx] || '').trim() : '';
+
+  const parts = dstLoc.split('/').map(s => s.trim()).filter(Boolean);
+  const newCompany = parts[0] || '';
+  const newHub = parts[1] || '';
+
+  if (newCompany && newHub && id) {
+    google.script.run.withSuccessHandler(sheetName => {
+      if (sheetName) {
+        jumpToSearchResult(newCompany, newHub, sheetName, id, false);
+      } else {
+        openDetailModal(id);
+      }
+    }).findSheetByAssetId(id);
+    return;
+  }
+
+  openDetailModal(String(id || ''));
+}
+
+// ▼ 修正：ドラッグ＆ドロップに対応したテーブル描画
+function renderTable() {
+  hiddenCols = JSON.parse(localStorage.getItem('hiddenCols_' + STATE.sheet)) || [];
+  
+  let colOrder = getColOrder();
+
+  const rows = STATE.rows;
+  const headers = STATE.headers;
+  const alertFlagIdx = headers.indexOf('アラート有無');
+  const alertDateIdx = headers.indexOf('アラート日付');
+  const isReadOnly = (STATE.sheet === '消去済み' || STATE.sheet === '移動履歴');
+  const hasCompanyAndHub = headers.includes('会社名') && headers.includes('拠点');
+
+  let html = '';
+  if (!isReadOnly) {
+    html += `<div style="text-align:right; margin-bottom:15px;"><button class="btn btn-primary" onclick="openModal()">+ 新規登録</button></div>`;
+  } else {
+    html += `<div style="text-align:right; margin-bottom:15px; height: 36px;"></div>`;
+  }
+  
+  if (rows.length === 0) {
+    html += '<div style="color:#666; text-align:center; padding:40px;">データがありません</div>';
+  } else {
+    html += '<table><thead><tr>';
+    
+    // colOrder に従ってヘッダーを描画
+    colOrder.forEach(i => {
+      if (hiddenCols.includes(i)) return;
+      const h = headers[i];
+      const savedWidth = localStorage.getItem(`colwidth_${STATE.sheet}_${h}`);
+      const widthStyle = savedWidth ? `${savedWidth}px` : '120px';
+      
+      let sortIcon = '<i class="fas fa-sort sort-icon-default"></i>';
+      if (SORT_STATE.colIndex === i) {
+        sortIcon = SORT_STATE.isAsc ? '<i class="fas fa-sort-up sort-icon"></i>' : '<i class="fas fa-sort-down sort-icon"></i>';
+      }
+      
+      // ドラッグ用の属性とイベントを追加
+      html += `<th data-colname="${h}" style="width: ${widthStyle};" 
+                 draggable="true" 
+                 ondragstart="handleColDragStart(event, ${i})" 
+                 ondragover="handleColDragOver(event)" 
+                 ondrop="handleColDrop(event, ${i})"
+                 ondragleave="handleColDragLeave(event)"
+                 ondragend="handleColDragEnd(event)">
+                 <div style="display:flex; justify-content:space-between; align-items:center;" onclick="handleColHeaderClick(${i})">
+                   <span>${h} ${sortIcon}</span>
+                 </div>
+               </th>`;
+    });
+    if (!isReadOnly) html += '<th style="width: 120px; text-align:center;">操作</th>';
+    html += '</tr></thead><tbody>';
+    
+    rows.forEach((row, rowIdx) => {
+      const idIndex = headers.findIndex(h => h.includes('管理番号') || h.includes('業者ID'));
+      const id = idIndex > -1 ? row[idIndex] : '';
+      let isAlert = false;
+      if (alertFlagIdx > -1 && alertDateIdx > -1) {
+        if (row[alertFlagIdx] === '有' && row[alertDateIdx]) {
+           const d = new Date(String(row[alertDateIdx]).replace(/-/g, '/'));
+           d.setHours(0, 0, 0, 0);
+           const leadIdx = headers.indexOf('アラート表示開始日数');
+           let lead = 30;
+           if (leadIdx > -1) {
+             const n = Number(String(row[leadIdx] || '').trim());
+             if ([30, 90, 120, 150].includes(n)) lead = n;
+           }
+           const start = new Date(d.getTime());
+           start.setDate(start.getDate() - lead);
+           const today = new Date();
+           today.setHours(0, 0, 0, 0);
+           if (today >= start) isAlert = true;
+        }
+      }
+      const rowClick = (STATE.sheet === '移動履歴')
+        ? `handleMoveHistoryClick(${rowIdx})`
+        : `openDetailModal('${id}')`;
+      html += `<tr class="${isAlert ? 'row-alert' : ''}" onclick="${rowClick}">`;
+      
+      // colOrder に従ってセルを描画
+      colOrder.forEach(i => {
+        if (hiddenCols.includes(i)) return;
+        const h = headers[i];
+        let val = row[i] !== undefined ? row[i] : '';
+        
+        if (h.includes('金額') || h.includes('費用') || h.includes('予算')) {
+          val = formatCurrency(val);
+        }
+
+        if ((h.includes('画像') || h.includes('添付') || h.includes('URL')) && String(val).startsWith('http')) {
+          val = `<a href="${val}" target="_blank" onclick="event.stopPropagation();"><img src="${convertDriveUrl(val)}" class="img-thumb"></a>`;
+        }
+        html += `<td><div class="cell-content">${val}</div></td>`;
+      });
+      
+      if (!isReadOnly) {
+        let moveBtn = hasCompanyAndHub ? `<button class="btn-ghost" style="color:var(--brand); padding:4px 8px; border:1px solid var(--border); border-radius:4px;" title="他拠点へ移動" onclick="openMoveModal('${id}')"><i class="fas fa-truck"></i></button>` : '';
+        html += `<td onclick="event.stopPropagation();" style="white-space:nowrap; text-align:center;">
+                   ${moveBtn}
+                   <button class="btn-ghost" style="padding:4px 8px; border:1px solid var(--border); border-radius:4px; margin-left:5px;" title="編集" onclick="openModal('${id}')"><i class="fas fa-edit"></i></button>
+                   <button class="btn-ghost" style="color:#bf616a; padding:4px 8px; border:1px solid var(--border); border-radius:4px; margin-left:5px;" title="削除" onclick="deleteData('${id}')"><i class="fas fa-trash"></i></button>
+                 </td>`;
+      }
+      html += `</tr>`;
+    });
+    html += '</tbody></table>';
+  }
+  document.getElementById('app-content').innerHTML = html;
+  initTableResizer();
+}
+
+function openDetailModal(id) {
+  resetModalPosition(); 
+  const headers = DATA.columns[STATE.sheet];
+  const idIndex = headers.findIndex(h => h.includes('管理番号') || h.includes('業者ID'));
+  const currentIndex = STATE.rows.findIndex(r => String(r[idIndex]) === String(id));
+  if (currentIndex === -1) return;
+  const rowData = STATE.rows[currentIndex];
+
+  let html = '<div style="display:flex; flex-direction:column; gap:12px;">';
+  headers.forEach((h, i) => {
+    let val = rowData[i] !== "" && rowData[i] !== undefined ? rowData[i] : '<span style="color:#666;">(未入力)</span>';
+    
+    if (val !== '<span style="color:#666;">(未入力)</span>' && (h.includes('金額') || h.includes('費用') || h.includes('予算'))) {
+      val = formatCurrency(val);
+    }
+
+    let displayVal = val;
+    if (typeof val === 'string' && val.startsWith('http')) {
+      displayVal = `<a href="${val}" target="_blank" style="color:var(--brand); text-decoration:none;"><i class="fas fa-external-link-alt"></i> リンクを開く</a>`;
+      if (h.includes('画像') || h.includes('添付')) {
+        displayVal += `<br><img src="${convertDriveUrl(val)}" style="max-width:100%; max-height:200px; margin-top:10px; border-radius:4px; border:1px solid var(--border);">`;
+      }
+    }
+    html += `<div style="background: var(--bg-dark); padding: 12px; border-radius: 6px; border: 1px solid var(--border);"><div style="font-size: 11px; color: var(--text-sub); margin-bottom: 5px;">${h}</div><div style="font-size: 14px; color: var(--text-main); word-break: break-all;">${displayVal}</div></div>`;
+  });
+  html += '</div>';
+
+  document.getElementById('modal-title').innerText = "詳細情報";
+  document.getElementById('modal-form-area').innerHTML = html;
+  
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < STATE.rows.length - 1;
+  const prevId = hasPrev ? STATE.rows[currentIndex - 1][idIndex] : null;
+  const nextId = hasNext ? STATE.rows[currentIndex + 1][idIndex] : null;
+
+  document.getElementById('modal-nav-buttons').innerHTML = `
+    <button class="btn btn-ghost" onclick="openDetailModal('${prevId}')" ${hasPrev ? '' : 'disabled'}><i class="fas fa-chevron-left"></i> 前へ</button>
+    <button class="btn btn-ghost" onclick="openDetailModal('${nextId}')" ${hasNext ? '' : 'disabled'}>次へ <i class="fas fa-chevron-right"></i></button>
+  `;
+  
+  document.getElementById('modal-action-buttons').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal()">閉じる</button>
+    <button class="btn btn-ghost" style="color: var(--brand); border: 1px solid var(--brand);" onclick="openModal('${id}', true)"><i class="fas fa-copy"></i> 複製して新規</button>
+    <button class="btn btn-primary" onclick="openModal('${id}')"><i class="fas fa-edit"></i> 編集画面へ</button>
+  `;
+  document.getElementById('modal-root').style.display = 'flex';
+}
+
+function openModal(id = null, isCopy = false) {
+  resetModalPosition(); 
+  
+  const isNew = (!id || id === null || isCopy);
+  const headers = DATA.columns[STATE.sheet];
+  let rowData = null;
+  
+  if (id !== null) {
+    const idIndex = headers.findIndex(h => h.includes('管理番号') || h.includes('業者ID'));
+    rowData = STATE.originalRows.find(r => String(r[idIndex]) === String(id));
+  }
+
+  let normalInputs = "";
+  let alertInputs = "";
+
+  headers.forEach((h, i) => {
+    let val = rowData ? rowData[i] : '';
+    if (h === 'アラート有無' || h === 'アラート日付' || h === 'アラート表示開始日数' || h === 'アラート繰り返し') return;
+
+    if (isCopy && (h.includes('管理番号') || h.includes('業者ID'))) {
+      val = ''; 
+    }
+
+    if (h.includes('金額') || h.includes('費用') || h.includes('予算')) {
+      val = String(val).replace(/,/g, '');
+    }
+
+    let inputType = "text";
+    if (DATA.dateColumns.includes(h)) {
+      inputType = "date";
+      if(val && val.includes('/')) val = val.replace(/\//g, '-');
+    }
+
+    let inputEl = `<input type="${inputType}" name="col_${i}" class="form-input" value="${val}" id="input_col_${i}">`;
+    
+    if (h.includes('画像') || h.includes('添付') || h.includes('書類') || h.includes('URL')) {
+      inputEl = `
+        <div class="drop-zone" id="drop_zone_${i}" onclick="triggerFileUpload(${i})" ondragover="handleDragOver(event, this)" ondragleave="handleDragLeave(event, this)" ondrop="handleDrop(event, ${i}, this)">
+          <i class="fas fa-cloud-upload-alt" style="font-size: 20px; margin-bottom: 5px;"></i><br>
+          ファイルを選択、またはここにドラッグ＆ドロップ
+        </div>
+        <div class="input-group">
+          <input type="${inputType}" name="col_${i}" class="form-input" value="${val}" id="input_col_${i}" placeholder="アップロード後にURLが入ります">
+          <button type="button" class="btn-upload" onclick="triggerFileUpload(${i})" id="btn_upload_${i}">
+            <i class="fas fa-paperclip"></i>
+          </button>
+          <input type="file" id="file_col_${i}" style="display:none" onchange="uploadFile(this, ${i})">
+        </div>`;
+    }
+
+    if (h === '更新日' || h === '更新日時') {
+      inputEl = `<input type="text" name="col_${i}" class="form-input readonly-input" value="${val}" placeholder="保存時に自動更新" readonly>`;
+    } else if (h === '会社名') {
+      inputEl = `<select name="col_${i}" class="form-input" onchange="updateHubOptions(this.value, ${i+1})"><option value="">選択してください</option>${getOrderedCompanies().map(c => `<option value="${c}" ${c === val || (isNew && STATE.company && STATE.sheet !== '業者一覧' && c === STATE.company) ? 'selected':''}>${c}</option>`).join('')}</select>`;
+    } else if (h === '拠点') {
+      const currentComp = rowData ? rowData[i-1] : (STATE.sheet === '業者一覧' ? '' : STATE.company);
+      const hubs = DATA.structure[currentComp] || [];
+      inputEl = `<select name="col_${i}" class="form-input" id="hub-select-modal" onchange="onHubSelectChange()">${hubs.map(hb => `<option value="${hb}" ${hb === val || (isNew && STATE.hub && STATE.sheet !== '業者一覧' && hb === STATE.hub) ? 'selected':''}>${hb}</option>`).join('')}</select>`;
+    } else if (h === 'フロア') {
+      inputEl = `<input type="${inputType}" name="col_${i}" class="form-input" value="${val}" id="input_col_${i}" oninput="syncAssetIdPreview()" placeholder="例: 4 または 4F">`;
+    } else if (h === '部屋、場所') {
+      const rooms = DATA.roomOptions || [];
+      if (rooms.length && isNew) {
+        const opts = rooms.map(r => {
+          const selected = (val && val === r.name) ? 'selected' : '';
+          return `<option value="${r.name}" ${selected}>${r.name}（${r.code}）</option>`;
+        }).join('');
+        inputEl = `<select name="col_${i}" class="form-input" id="input_col_${i}" onchange="syncAssetIdPreview()">
+          <option value="">選択してください</option>
+          ${opts}
+          <option value="__custom__">その他（手入力）</option>
+        </select>
+        <input type="text" class="form-input" id="room_custom_${i}" style="margin-top:6px; display:none;" placeholder="部屋名を手入力" oninput="onRoomCustomInput(${i})">`;
+      } else {
+        inputEl = `<input type="${inputType}" name="col_${i}" class="form-input" value="${val}" id="input_col_${i}" oninput="syncAssetIdPreview()" list="room-datalist">`;
+      }
+    } else if (h === '品目' || h === '設備名' || h === '工事名') {
+      const cat = h === '設備名' ? '設備' : (h === '工事名' ? '工事' : '備品');
+      const items = (DATA.itemOptions && DATA.itemOptions[cat]) ? DATA.itemOptions[cat] : [];
+      if (items.length && isNew) {
+        const opts = items.map(it => {
+          const selected = (val && val === it.label) ? 'selected' : '';
+          return `<option value="${it.label}" ${selected}>${it.label}（${it.code}）</option>`;
+        }).join('');
+        inputEl = `<select name="col_${i}" class="form-input" id="input_col_${i}" onchange="syncAssetIdPreview()">
+          <option value="">選択してください</option>
+          ${opts}
+          <option value="__custom__">その他（手入力）</option>
+        </select>
+        <input type="text" class="form-input" id="item_custom_${i}" style="margin-top:6px; display:none;" placeholder="名称を手入力" oninput="onItemCustomInput(${i})">`;
+      } else {
+        inputEl = `<input type="${inputType}" name="col_${i}" class="form-input" value="${val}" id="input_col_${i}" oninput="syncAssetIdPreview()" list="item-datalist-${cat}">`;
+      }
+    } else if (h === 'カテゴリー') {
+      inputEl = `<select name="col_${i}" class="form-input"><option value="">選択してください</option>${VENDOR_CATEGORIES.map(c => `<option value="${c}" ${c === val ? 'selected' : ''}>${c}</option>`).join('')}</select>`;
+    } else if (h.includes('管理番号') || h.includes('業者ID')) {
+      const ph = h.includes('管理番号')
+        ? '例: TK4N5（保存時に -001 を自動付与 → TK4N5-001）'
+        : '未入力の場合は自動採番';
+      inputEl = `<input type="text" name="col_${i}" class="form-input" value="${val}" id="input_col_${i}" placeholder="${ph}">
+        <div style="font-size:11px;color:var(--text-sub);margin-top:4px;">拠点・フロア・部屋・品目を入れると自動でベースが入ります。末尾連番は保存時に付きます。</div>`;
+    }
+    normalInputs += `<div class="form-row"><label>${h}</label>${inputEl}</div>`;
+  });
+
+  const alertFlagIdx = headers.indexOf('アラート有無');
+  const alertDateIdx = headers.indexOf('アラート日付');
+  const alertLeadIdx = headers.indexOf('アラート表示開始日数');
+  const alertRepeatIdx = headers.indexOf('アラート繰り返し');
+  if (alertFlagIdx > -1 && alertDateIdx > -1) {
+    let flagVal = rowData ? rowData[alertFlagIdx] : '無';
+    let dateVal = rowData ? rowData[alertDateIdx] : '';
+    if (dateVal && String(dateVal).includes('/')) dateVal = String(dateVal).replace(/\//g, '-');
+    let leadVal = alertLeadIdx > -1 && rowData ? String(rowData[alertLeadIdx] || '30').trim() : '30';
+    if (!['30', '90', '120', '150'].includes(leadVal)) leadVal = '30';
+    let repeatVal = alertRepeatIdx > -1 && rowData ? String(rowData[alertRepeatIdx] || 'なし').trim() : 'なし';
+    if (repeatVal !== '毎年') repeatVal = 'なし';
+    const leadOpts = (DATA.alertLeadDaysOptions || [30, 90, 120, 150])
+      .map(d => `<option value="${d}" ${String(d) === leadVal ? 'selected' : ''}>${d}日前から</option>`)
+      .join('');
+    alertInputs = `<div class="alert-setting-area">
+      <span class="alert-title"><i class="fas fa-bell"></i> アラート設定</span>
+      <div class="form-row"><label>通知の有無</label>
+        <select name="col_${alertFlagIdx}" class="form-input">
+          <option value="無" ${flagVal === '無' ? 'selected' : ''}>通知しない</option>
+          <option value="有" ${flagVal === '有' ? 'selected' : ''}>通知する</option>
+        </select>
+      </div>
+      <div class="form-row"><label>通知予定日（次回期限）</label>
+        <input type="date" name="col_${alertDateIdx}" class="form-input" value="${dateVal}">
+      </div>
+      ${alertLeadIdx > -1 ? `<div class="form-row"><label>表示開始</label>
+        <select name="col_${alertLeadIdx}" class="form-input">${leadOpts}</select>
+        <div style="font-size:11px;color:var(--text-sub);margin-top:4px;">この日数前からホーム／アラート管理に表示されます</div>
+      </div>` : ''}
+      ${alertRepeatIdx > -1 ? `<div class="form-row"><label>繰り返し</label>
+        <select name="col_${alertRepeatIdx}" class="form-input">
+          <option value="なし" ${repeatVal === 'なし' ? 'selected' : ''}>なし</option>
+          <option value="毎年" ${repeatVal === '毎年' ? 'selected' : ''}>毎年</option>
+        </select>
+        <div style="font-size:11px;color:var(--text-sub);margin-top:4px;">毎年の場合、アラート管理の「今年完了」で予定日を1年後へ送れます（通知はONのまま）</div>
+      </div>` : ''}
+    </div>`;
+  }
+
+  let hiddenDataId = isCopy ? '' : (id || '');
+  let html = `<form id="editForm"><input type="hidden" name="sheetName" value="${STATE.sheet}"><input type="hidden" name="dataId" value="${hiddenDataId}">${normalInputs}${alertInputs}</form>`;
+  
+  document.getElementById('modal-form-area').innerHTML = html;
+  document.getElementById('modal-title').innerText = isCopy ? "新規登録 (データの複製)" : (isNew ? "新規登録" : "詳細・編集");
+  document.getElementById('modal-nav-buttons').innerHTML = ''; 
+  document.getElementById('modal-action-buttons').innerHTML = `<button class="btn btn-ghost" onclick="closeModal()">キャンセル</button><button class="btn btn-primary" id="save-btn" onclick="submitForm()">保 存</button>`;
+  document.getElementById('modal-root').style.display = 'flex';
+
+  if (isNew && STATE.sheet !== '業者一覧') {
+    syncAssetIdPreview();
+  }
+}
+
+function openMoveModal(id) {
+  resetModalPosition();
+  const headers = DATA.columns[STATE.sheet];
+  const idIndex = headers.findIndex(h => h.includes('管理番号'));
+  const rowData = STATE.originalRows.find(r => String(r[idIndex]) === String(id));
+  if (!rowData) return;
+
+  const compIdx = headers.indexOf('会社名');
+  const hubIdx = headers.indexOf('拠点');
+  const currentComp = compIdx > -1 ? rowData[compIdx] : STATE.company;
+  const currentHub = hubIdx > -1 ? rowData[hubIdx] : STATE.hub;
+
+  const today = new Date().toISOString().split('T')[0];
+
+  let html = `
+    <form id="moveForm">
+      <input type="hidden" name="sheetName" value="${STATE.sheet}">
+      <input type="hidden" name="dataId" value="${id}">
+      <input type="hidden" name="currentHub" value="${STATE.hub || ''}">
+      
+      <div class="form-row">
+        <label>対象の管理番号</label>
+        <input type="text" class="form-input readonly-input" value="${id}" readonly>
+      </div>
+      
+      <div class="form-row">
+        <label>現在の会社・拠点</label>
+        <input type="text" class="form-input readonly-input" value="${currentComp} / ${currentHub}" readonly>
+      </div>
+      
+      <div style="text-align:center; margin:15px 0; color:var(--text-sub);"><i class="fas fa-arrow-down fa-2x"></i></div>
+
+      <div class="form-row" style="background:var(--hover); padding:20px; border-radius:8px; border:1px solid var(--border);">
+        <label style="color:var(--brand); font-weight:bold; font-size:14px; margin-bottom:15px;"><i class="fas fa-map-marker-alt"></i> 移動先を指定</label>
+        <div style="display:flex; gap:15px;">
+          <div style="flex:1;">
+            <label>移動先の会社</label>
+            <select name="newCompany" class="form-input" onchange="updateMoveHubOptions(this.value)" required>
+              <option value="">選択してください</option>
+              ${Object.keys(DATA.structure).map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label>移動先の拠点</label>
+            <select name="newHub" id="move-hub-select" class="form-input" required>
+              <option value="">先に会社を選択</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top:20px;">
+        <label>移動日</label>
+        <input type="date" name="moveDate" class="form-input" value="${today}" required>
+      </div>
+      
+      <div class="form-row">
+        <label>移動理由・備考</label>
+        <input type="text" name="reason" class="form-input" placeholder="例：レイアウト変更のため">
+      </div>
+    </form>
+  `;
+
+  document.getElementById('modal-title').innerText = "資産を別拠点へ移動";
+  document.getElementById('modal-form-area').innerHTML = html;
+  document.getElementById('modal-nav-buttons').innerHTML = '';
+  document.getElementById('modal-action-buttons').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal()">キャンセル</button>
+    <button class="btn btn-primary" id="move-btn" onclick="submitMoveForm()"><i class="fas fa-truck"></i> 移動を実行</button>
+  `;
+  document.getElementById('modal-root').style.display = 'flex';
+}
+
+function updateMoveHubOptions(comp) {
+  const hubs = DATA.structure[comp] || [];
+  const el = document.getElementById('move-hub-select');
+  if (el) el.innerHTML = hubs.map(h => `<option value="${h}">${h}</option>`).join('');
+}
+
+function submitMoveForm() {
+  const formElement = document.getElementById('moveForm');
+  const newCompany = formElement.querySelector('[name="newCompany"]').value;
+  const newHub = formElement.querySelector('[name="newHub"]').value;
+  if (!newCompany || !newHub) {
+    alert("移動先の会社と拠点を選択してください。");
+    return;
+  }
+
+  const moveBtn = document.getElementById('move-btn');
+  moveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 処理中...';
+  moveBtn.disabled = true;
+
+  const formDataObj = {};
+  formElement.querySelectorAll('input, select').forEach(el => formDataObj[el.name] = el.value);
+
+  google.script.run
+    .withSuccessHandler((res) => {
+      closeModal();
+      STATE.headers = res.headers; 
+      STATE.rows = res.rows; 
+      STATE.originalRows = [...res.rows]; 
+      updateSearchOptions(); 
+      renderTable();
+      setTimeout(() => alert("移動が完了しました。"), 100);
+    })
+    .withFailureHandler(err => {
+      alert("エラーが発生しました: " + err.message);
+      moveBtn.innerHTML = '<i class="fas fa-truck"></i> 移動を実行';
+      moveBtn.disabled = false;
+    }).moveAsset(formDataObj);
+}
+
+function triggerFileUpload(index) { 
+  document.getElementById(`file_col_${index}`).click(); 
+}
+
+function handleDragOver(e, zoneEl) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  zoneEl.classList.add('dragover');
+}
+
+function handleDragLeave(e, zoneEl) {
+  const rt = e.relatedTarget;
+  if (rt && zoneEl.contains(rt)) return;
+  zoneEl.classList.remove('dragover');
+}
+
+function handleDrop(e, index, zoneEl) {
+  e.preventDefault();
+  e.stopPropagation();
+  zoneEl.classList.remove('dragover');
+  const files = e.dataTransfer && e.dataTransfer.files;
+  if (!files || !files.length) return;
+  const btn = document.getElementById(`btn_upload_${index}`);
+  if (!btn) return;
+  processFileUpload(files[0], index, btn);
+}
+
+function uploadFile(input, index) {
+  const file = input.files[0];
+  if (!file) return;
+  const btn = input.previousElementSibling;
+  processFileUpload(file, index, btn);
+}
+
+function processFileUpload(file, index, btn) {
+  if (!file) return;
+  const originalIcon = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  btn.classList.add('loading');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const content = e.target.result.split(',')[1]; 
+    google.script.run.withSuccessHandler(url => {
+      document.getElementById(`input_col_${index}`).value = url;
+      btn.innerHTML = '<i class="fas fa-check"></i>';
+      setTimeout(() => { btn.innerHTML = originalIcon; btn.classList.remove('loading'); }, 2000);
+    }).withFailureHandler(err => {
+      alert('アップロード失敗: ' + err.message);
+      btn.innerHTML = originalIcon;
+      btn.classList.remove('loading');
+    }).uploadFileToDrive(content, file.name, file.type);
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateHubOptions(comp, index) {
+  const hubs = DATA.structure[comp] || [];
+  const el = document.getElementById('hub-select-modal');
+  if (el) {
+    el.innerHTML = hubs.map(h => `<option value="${h}">${h}</option>`).join('');
+    onHubSelectChange();
+  }
+}
+
+function onHubSelectChange() {
+  syncAssetIdPreview();
+}
+
+function onRoomCustomInput(idx) {
+  const custom = document.getElementById('room_custom_' + idx);
+  const sel = document.getElementById('input_col_' + idx);
+  if (custom && sel && sel.tagName === 'SELECT') {
+    // 手入力値を select の value として使うため、一時的に option を差し替えない。
+    // sync は custom の値を優先参照する。
+    syncAssetIdPreview();
+  }
+}
+
+function onItemCustomInput(idx) {
+  syncAssetIdPreview();
+}
+
+function getFormFieldValue_(idx) {
+  const el = document.getElementById('input_col_' + idx);
+  if (!el) {
+    const named = document.querySelector(`#editForm [name="col_${idx}"]`);
+    return named ? String(named.value || '').trim() : '';
+  }
+  if (el.tagName === 'SELECT' && el.value === '__custom__') {
+    const customRoom = document.getElementById('room_custom_' + idx);
+    const customItem = document.getElementById('item_custom_' + idx);
+    const custom = customRoom || customItem;
+    if (custom) {
+      custom.style.display = 'block';
+      return String(custom.value || '').trim();
+    }
+  } else if (el.tagName === 'SELECT') {
+    const customRoom = document.getElementById('room_custom_' + idx);
+    const customItem = document.getElementById('item_custom_' + idx);
+    if (customRoom) customRoom.style.display = 'none';
+    if (customItem) customItem.style.display = 'none';
+  }
+  return String(el.value || '').trim();
+}
+
+function normalizeFloorClient_(floorVal) {
+  const s = String(floorVal || '').trim();
+  const m = s.match(/(\d+)/);
+  return m ? m[1] : s.replace(/[\s\-]/g, '');
+}
+
+function lookupRoomCodeClient_(roomName) {
+  const raw = String(roomName || '').trim();
+  if (!raw) return '';
+  const map = DATA.roomCodes || {};
+  if (map[raw]) return map[raw];
+  let best = '';
+  let bestLen = -1;
+  Object.keys(map).forEach(name => {
+    if (raw === name || name.indexOf(raw) > -1 || raw.indexOf(name) > -1) {
+      if (name.length > bestLen) {
+        bestLen = name.length;
+        best = map[name];
+      }
+    }
+  });
+  if (best) return best;
+  const one = raw.replace(/[Ａ-Ｚａ-ｚ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).toUpperCase();
+  if (/^[A-Z]$/.test(one)) return one;
+  return '';
+}
+
+function lookupItemCodeClient_(rawName, sheetName, roomName) {
+  const raw = String(rawName || '').trim();
+  const cat = sheetName === '設備管理' ? '設備' : (sheetName === '工事履歴' ? '工事' : '備品');
+  const dict = (DATA.itemCodes && DATA.itemCodes[cat]) ? DATA.itemCodes[cat] : {};
+  if (!raw) return cat === '工事' ? '0' : '';
+  if (dict[raw]) return String(dict[raw]);
+
+  const roomHint = String(roomName || '');
+  if (/会議/.test(roomHint) || /会議/.test(raw)) {
+    if (/イス|椅子|チェア/i.test(raw) && dict['会議室イス']) return String(dict['会議室イス']);
+    if (/机|デスク/i.test(raw) && dict['会議室デスク']) return String(dict['会議室デスク']);
+    if (/モニタ/i.test(raw) && dict['会議室モニター']) return String(dict['会議室モニター']);
+  }
+
+  let bestLabel = '';
+  Object.keys(dict).forEach(label => {
+    if (label.indexOf(raw) > -1 || raw.indexOf(label) > -1) {
+      if (label.length > bestLabel.length) bestLabel = label;
+    }
+  });
+  if (bestLabel) return String(dict[bestLabel]);
+
+  const lead = raw.match(/^(\d+)/);
+  if (lead) return lead[1];
+  return cat === '工事' ? '0' : '';
+}
+
+/** 新規登録時、拠点・フロア・部屋・品目から管理番号ベースを自動反映（連番は保存時） */
+function syncAssetIdPreview() {
+  const headers = DATA.columns[STATE.sheet];
+  if (!headers) return;
+  const idIdx = headers.findIndex(h => h.includes('管理番号'));
+  if (idIdx < 0) return;
+
+  const dataIdEl = document.querySelector('#editForm input[name="dataId"]');
+  if (dataIdEl && dataIdEl.value) return; // 編集時は触らない
+
+  const idEl = document.getElementById('input_col_' + idIdx);
+  if (!idEl) return;
+
+  const companyIdx = headers.indexOf('会社名');
+  const hubIdx = headers.indexOf('拠点');
+  const floorIdx = headers.indexOf('フロア');
+  const roomIdx = headers.indexOf('部屋、場所');
+  let nameIdx = headers.indexOf('品目');
+  if (nameIdx < 0) nameIdx = headers.indexOf('設備名');
+  if (nameIdx < 0) nameIdx = headers.indexOf('工事名');
+
+  const companyEl = companyIdx > -1 ? document.querySelector(`#editForm [name="col_${companyIdx}"]`) : null;
+  const hubEl = hubIdx > -1 ? document.getElementById('hub-select-modal') : null;
+
+  const company = companyEl ? companyEl.value.trim() : (STATE.company || '');
+  const hub = hubEl ? hubEl.value.trim() : (STATE.hub || '');
+  const hubCode = (DATA.hubCodes && DATA.hubCodes[`${company}_${hub}`]) ? String(DATA.hubCodes[`${company}_${hub}`]).trim() : '';
+  const floor = floorIdx > -1 ? normalizeFloorClient_(getFormFieldValue_(floorIdx)) : '';
+  const roomName = roomIdx > -1 ? getFormFieldValue_(roomIdx) : '';
+  const roomCode = roomIdx > -1 ? lookupRoomCodeClient_(roomName) : '';
+  const itemName = nameIdx > -1 ? getFormFieldValue_(nameIdx) : '';
+  const itemCode = nameIdx > -1 ? lookupItemCodeClient_(itemName, STATE.sheet, roomName) : '';
+
+  // カスタム選択時に入力欄を表示
+  if (roomIdx > -1) getFormFieldValue_(roomIdx);
+  if (nameIdx > -1) getFormFieldValue_(nameIdx);
+
+  if (!hubCode) {
+    // コード未登録拠点は手入力を妨げない
+    return;
+  }
+
+  idEl.value = (hubCode + floor + roomCode + itemCode).toUpperCase();
+}
+
+function submitForm() {
+  const saveBtn = document.getElementById('save-btn');
+  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+  saveBtn.disabled = true;
+
+  const formElement = document.getElementById('editForm');
+  const formDataObj = {};
+  
+  const elements = formElement.querySelectorAll('input[name], select[name]');
+  elements.forEach(el => {
+    if (el.type !== 'file') {
+      formDataObj[el.name] = el.value;
+    }
+  });
+
+  // 部屋・品目の「その他」手入力を実値に差し替え
+  const headers = DATA.columns[STATE.sheet] || [];
+  headers.forEach((h, i) => {
+    const key = 'col_' + i;
+    if (!(key in formDataObj)) return;
+    if (formDataObj[key] !== '__custom__') return;
+    if (h === '部屋、場所') {
+      const custom = document.getElementById('room_custom_' + i);
+      formDataObj[key] = custom ? custom.value.trim() : '';
+    } else if (h === '品目' || h === '設備名' || h === '工事名') {
+      const custom = document.getElementById('item_custom_' + i);
+      formDataObj[key] = custom ? custom.value.trim() : '';
+    }
+  });
+
+  // 保存直前にプレビューを再同期（手入力漏れ防止）
+  const dataIdEl = formElement.querySelector('input[name="dataId"]');
+  if (!dataIdEl || !dataIdEl.value) {
+    syncAssetIdPreview();
+    const idIdx = headers.findIndex(hh => hh.includes('管理番号'));
+    if (idIdx > -1) {
+      const idEl = document.getElementById('input_col_' + idIdx);
+      if (idEl) formDataObj['col_' + idIdx] = idEl.value;
+    }
+  }
+
+  google.script.run
+    .withSuccessHandler((res) => {
+      closeModal();
+      if(STATE.sheet === '業者一覧') { 
+         renderVendorHierarchy(); 
+      } else { 
+         STATE.headers = res.headers; STATE.rows = res.rows; STATE.originalRows = [...res.rows]; updateSearchOptions(); renderTable(); 
+      }
+      checkGlobalAlerts();
+    })
+    .withFailureHandler(err => {
+      alert("エラーが発生しました: " + err.message);
+      saveBtn.innerHTML = '保 存';
+      saveBtn.disabled = false;
+    }).saveData(formDataObj);
+}
+
+function deleteData(id) {
+  const reason = prompt(`管理番号 [${id}] を削除します。\nよろしければ「消去理由」を入力してOKを押してください。\n（※空欄のままでも削除可能です）`);
+  if(reason === null) return; 
+
+  document.getElementById('app-content').innerHTML = '<div style="padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i> 削除中...</div>';
+  google.script.run.withSuccessHandler((res) => {
+    if(STATE.sheet === '業者一覧') { renderVendorHierarchy(); } else { STATE.headers = res.headers; STATE.rows = res.rows; STATE.originalRows = [...res.rows]; updateSearchOptions(); renderTable(); }
+    checkGlobalAlerts();
+  }).deleteData(STATE.sheet, id, STATE.hub, reason); 
+}
+
+function resetHome() { renderCompanySelect(); checkGlobalAlerts(); }
+function closeModal() { document.getElementById('col-modal-root').style.display = 'none'; document.getElementById('modal-root').style.display = 'none'; }
+function convertDriveUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  return url.replace(/.*\/d\/([^\/]+).*/, 'https://drive.google.com/thumbnail?id=$1&sz=w200');
+}
+</script>
+</body>
+</html>
